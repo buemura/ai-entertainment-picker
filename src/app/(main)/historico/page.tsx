@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface RecommendationData {
   id: string;
@@ -15,6 +16,7 @@ interface RecommendationData {
   episodes?: number;
   artist?: string;
   language?: string;
+  imageUrl?: string | null;
   createdAt: string;
 }
 
@@ -154,7 +156,19 @@ export default function HistoricoPage() {
                   style={{ animationDelay: `${i * 60}ms` }}
                 >
                   <div className="flex items-start gap-4">
-                    <div className="text-3xl">{config.emoji}</div>
+                    {rec.imageUrl ? (
+                      <div className="neo-card-static shrink-0 overflow-hidden bg-white p-0.5">
+                        <Image
+                          src={rec.imageUrl}
+                          alt={rec.title}
+                          width={64}
+                          height={96}
+                          className="h-24 w-16 rounded object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="text-3xl">{config.emoji}</div>
+                    )}
                     <div className="flex-1">
                       <div className="mb-1 flex items-center gap-2">
                         <span className="neo-card-static bg-white px-2 py-0.5 text-xs font-bold text-black">

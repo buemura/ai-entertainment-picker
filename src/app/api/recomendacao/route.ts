@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { recommendations } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getRecommendation } from "@/lib/ai";
+import { fetchImageUrl } from "@/lib/tmdb";
 import type { ActivityType, Filters } from "@/types";
 
 export async function POST(request: Request) {
@@ -36,12 +37,14 @@ export async function POST(request: Request) {
   const previousTitles = previous.map((r) => r.title);
 
   let recommendation;
+  let imageUrl: string | null = null;
   try {
     recommendation = await getRecommendation(
       resolvedType,
       filters,
       previousTitles
     );
+    imageUrl = await fetchImageUrl(recommendation.title, resolvedType);
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Erro desconhecido";
@@ -75,6 +78,7 @@ export async function POST(request: Request) {
       episodes: recommendation.episodes,
       artist: recommendation.artist,
       language: recommendation.language,
+      imageUrl,
     })
     .returning();
 

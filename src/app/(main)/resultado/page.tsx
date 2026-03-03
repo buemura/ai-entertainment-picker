@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import type { ActivityType } from "@/types";
 
 interface RecommendationData {
@@ -16,6 +17,7 @@ interface RecommendationData {
   episodes?: number;
   artist?: string;
   language?: string;
+  imageUrl?: string | null;
 }
 
 function ResultContent() {
@@ -27,8 +29,15 @@ function ResultContent() {
     useState<RecommendationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchRecommendation = useCallback(async () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoading(true);
     setError("");
 
@@ -45,6 +54,7 @@ function ResultContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ activityType, filters }),
+        signal: controller.signal,
       });
 
       if (!res.ok) {
@@ -59,11 +69,14 @@ function ResultContent() {
       const data = await res.json();
       setRecommendation(data.recommendation);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setError(
         err instanceof Error ? err.message : "Erro ao gerar recomendação."
       );
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [activityType, searchParams]);
 
@@ -71,6 +84,9 @@ function ResultContent() {
     if (activityType) {
       fetchRecommendation();
     }
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const typeColors: Record<string, string> = {
@@ -179,15 +195,31 @@ function ResultContent() {
           {emoji} {typeLabel}
         </div>
 
-        {/* Title */}
-        <h1 className="font-display text-4xl leading-tight text-black sm:text-5xl">
-          {recommendation.title}
-        </h1>
+        {/* Poster + Info */}
+        <div className={`flex gap-6 ${recommendation.imageUrl ? "flex-col sm:flex-row" : "flex-col"}`}>
+          {recommendation.imageUrl && (
+            <div className="neo-card-static shrink-0 overflow-hidden bg-white p-1 self-center sm:self-start">
+              <Image
+                src={recommendation.imageUrl}
+                alt={recommendation.title}
+                width={200}
+                height={300}
+                className="h-auto w-50 rounded"
+              />
+            </div>
+          )}
+          <div className="flex-1">
+            {/* Title */}
+            <h1 className="font-display text-4xl leading-tight text-black sm:text-5xl">
+              {recommendation.title}
+            </h1>
 
-        {/* Description */}
-        <p className="mt-4 text-lg font-medium leading-relaxed text-black/80">
-          {recommendation.description}
-        </p>
+            {/* Description */}
+            <p className="mt-4 text-lg font-medium leading-relaxed text-black/80">
+              {recommendation.description}
+            </p>
+          </div>
+        </div>
 
         {/* Metadata */}
         <div className="mt-6 flex flex-wrap gap-2">
