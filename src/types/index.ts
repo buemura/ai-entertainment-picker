@@ -103,3 +103,20 @@ export const MUSIC_LANGUAGES = [
   "Francês",
   "Qualquer idioma",
 ];
+
+export type RoomStatus = "waiting" | "done" | "expired";
+
+export interface RoomMember {
+  userId: string;
+  userName: string | null;
+  hasSubmitted: boolean;
+}
+
+export interface GroupRoomResponse {
+  status: RoomStatus;
+  code: string;
+  isCreator: boolean;
+  members: RoomMember[];
+  allSubmitted: boolean;
+  recommendation: Recommendation | null;
+}

@@ -59,21 +59,39 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4">
       {/* Decorative elements */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="animate-float absolute left-[10%] top-[15%] text-6xl opacity-20">🎬</div>
-        <div className="animate-float absolute right-[15%] top-[25%] text-5xl opacity-20" style={{ animationDelay: "1s" }}>🎵</div>
-        <div className="animate-float absolute left-[20%] bottom-[20%] text-5xl opacity-20" style={{ animationDelay: "2s" }}>🎮</div>
-        <div className="animate-float absolute right-[10%] bottom-[30%] text-6xl opacity-20" style={{ animationDelay: "0.5s" }}>📺</div>
+        <div className="animate-float absolute left-[10%] top-[15%] text-6xl opacity-20">
+          🎬
+        </div>
+        <div
+          className="animate-float absolute right-[15%] top-[25%] text-5xl opacity-20"
+          style={{ animationDelay: "1s" }}
+        >
+          🎵
+        </div>
+        <div
+          className="animate-float absolute left-[20%] bottom-[20%] text-5xl opacity-20"
+          style={{ animationDelay: "2s" }}
+        >
+          🎮
+        </div>
+        <div
+          className="animate-float absolute right-[10%] bottom-[30%] text-6xl opacity-20"
+          style={{ animationDelay: "0.5s" }}
+        >
+          📺
+        </div>
         <div className="animate-spin-slow absolute left-[5%] top-[50%] h-16 w-16 rounded-full border-4 border-dashed border-brutal-pink opacity-20" />
-        <div className="animate-spin-slow absolute right-[8%] top-[10%] h-12 w-12 rounded-lg border-4 border-dashed border-brutal-sky opacity-20" style={{ animationDirection: "reverse" }} />
+        <div
+          className="animate-spin-slow absolute right-[8%] top-[10%] h-12 w-12 rounded-lg border-4 border-dashed border-brutal-sky opacity-20"
+          style={{ animationDirection: "reverse" }}
+        />
       </div>
 
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="mb-8 text-center">
           <div className="mb-3 text-6xl">🎲</div>
-          <h1 className="font-display text-4xl text-black">
-            EntertainMe
-          </h1>
+          <h1 className="font-display text-4xl text-black">RecomendAI</h1>
           <p className="mt-2 text-lg font-medium text-black/70">
             Descubra o que curtir hoje!
           </p>

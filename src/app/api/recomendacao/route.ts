@@ -2,32 +2,11 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { recommendations } from "@/db/schema";
-import { eq, desc, and, gte } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { getRecommendation } from "@/lib/ai";
 import { fetchImageUrl } from "@/lib/tmdb";
+import { getTodayCount, DAILY_LIMIT } from "@/lib/rate-limit";
 import type { ActivityType, Filters } from "@/types";
-
-const DAILY_LIMIT = 3;
-
-function getStartOfDay(): Date {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return now;
-}
-
-async function getTodayCount(userId: string): Promise<number> {
-  const startOfDay = getStartOfDay();
-  const todayRecs = await db
-    .select({ id: recommendations.id })
-    .from(recommendations)
-    .where(
-      and(
-        eq(recommendations.userId, userId),
-        gte(recommendations.createdAt, startOfDay)
-      )
-    );
-  return todayRecs.length;
-}
 
 export async function POST(request: Request) {
   const session = await auth();

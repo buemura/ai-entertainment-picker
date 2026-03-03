@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 
 const navLinks = [
   { href: "/", label: "Início", emoji: "🏠" },
+  { href: "/sala", label: "Grupo", emoji: "👥" },
   { href: "/historico", label: "Histórico", emoji: "📜" },
 ];
 
@@ -21,7 +22,7 @@ export function Navbar() {
           <Link href="/" className="flex items-center gap-2">
             <span className="text-2xl">🎲</span>
             <span className="font-display text-lg tracking-wide text-black sm:text-xl">
-              EntertainMe
+              RecomendAI
             </span>
           </Link>
 
@@ -80,9 +81,7 @@ export function Navbar() {
               key={link.href}
               href={link.href}
               className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-xs font-bold transition-colors ${
-                pathname === link.href
-                  ? "bg-black text-white"
-                  : "text-black"
+                pathname === link.href ? "bg-black text-white" : "text-black"
               }`}
             >
               <span className="text-lg">{link.emoji}</span>

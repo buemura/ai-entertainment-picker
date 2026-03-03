@@ -1,6 +1,6 @@
-# AI Entertainment Picker
+# RecomendAI
 
-AI Entertainment Picker is a web application that helps users discover new movies, TV shows, animes, music, activities based on their preferences in that day.
+RecomendAI is an AI Entertainment Picker is a web application that helps users discover new movies, TV shows, animes, music, activities based on their preferences in that day.
 
 ## Features
 

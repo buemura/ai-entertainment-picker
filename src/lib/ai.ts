@@ -134,3 +134,65 @@ export async function getRecommendation(
   const text = await generateWithOpenAI(prompt);
   return parseJsonResponse(text);
 }
+
+export interface MemberPreference {
+  activityType: ActivityType;
+  filters: Filters;
+}
+
+function buildGroupPrompt(preferences: MemberPreference[]): string {
+  const baseInstruction =
+    "Você é um assistente especializado em recomendar entretenimento para grupos. Responda SEMPRE em português brasileiro. Retorne EXATAMENTE um JSON válido (sem markdown, sem blocos de código) com os campos especificados.";
+
+  const typeLabels: Record<string, string> = {
+    movie: "filme",
+    tv_show: "série de TV",
+    anime: "anime",
+    music: "música",
+  };
+
+  const memberLines = preferences.map((p, i) => {
+    const filterEntries = Object.entries(p.filters).filter(
+      ([, v]) => v !== undefined && v !== ""
+    );
+    const filterText =
+      filterEntries.length > 0
+        ? filterEntries.map(([k, v]) => `${k}: ${v}`).join(", ")
+        : "sem filtros específicos";
+    return `Membro ${i + 1}: quer ${typeLabels[p.activityType] || p.activityType}, filtros: ${filterText}`;
+  });
+
+  const types = [...new Set(preferences.map((p) => p.activityType))];
+  const typeInstruction =
+    types.length === 1
+      ? `Todos querem: ${typeLabels[types[0]] || types[0]}.`
+      : `Os membros têm preferências mistas. Escolha o tipo mais popular entre: ${types.map((t) => typeLabels[t] || t).join(", ")}.`;
+
+  return `${baseInstruction}
+
+Você deve recomendar UMA opção que agrade ao grupo como um todo. Encontre o melhor denominador comum entre as preferências individuais.
+
+${typeInstruction}
+
+Preferências individuais dos membros:
+${memberLines.join("\n")}
+
+Retorne este JSON exato (use null para campos não aplicáveis):
+{"activityType": "movie|tv_show|anime|music", "title": "nome", "description": "por que este conteúdo agrada ao grupo em 2-3 frases", "genre": "gênero", "releaseYear": 2024, "rating": 8.5, "seasons": null, "episodes": null, "artist": null, "language": null}`;
+}
+
+export async function getGroupRecommendation(
+  preferences: MemberPreference[]
+) {
+  const prompt = buildGroupPrompt(preferences);
+
+  try {
+    const text = await generateWithGemini(prompt);
+    return parseJsonResponse(text);
+  } catch (geminiError) {
+    console.warn("Gemini failed, falling back to OpenAI:", geminiError);
+  }
+
+  const text = await generateWithOpenAI(prompt);
+  return parseJsonResponse(text);
+}
