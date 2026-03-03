@@ -21,7 +21,7 @@ function buildPrompt(
       : "";
 
   const baseInstruction =
-    "Você é um assistente especializado em recomendar entretenimento. Responda SEMPRE em português brasileiro. Retorne EXATAMENTE um JSON válido (sem markdown, sem blocos de código) com os campos especificados.";
+    "Você é um assistente especializado em recomendar entretenimento. Retorne EXATAMENTE um JSON válido (sem markdown, sem blocos de código) com os campos especificados.";
 
   if (
     activityType === "movie" ||
@@ -63,9 +63,7 @@ function buildPrompt(
 Recomende um ${type}. ${filtersText}${previousList}
 
 Retorne este JSON exato:
-{"title": "nome", "description": "sinopse em 2-3 frases", "genre": "gênero principal", "releaseYear": 2024, "rating": 8.5, "seasons": null, "episodes": null}
-
-Para filmes, seasons e episodes devem ser null. Para séries e animes, preencha seasons e episodes.`;
+{"title": "nome original do título"}`;
   }
 
   if (activityType === "music") {
@@ -88,7 +86,7 @@ Para filmes, seasons e episodes devem ser null. Para séries e animes, preencha 
 Recomende uma música. ${filtersText}${previousList}
 
 Retorne este JSON exato:
-{"title": "nome da música", "description": "sobre a música em 2-3 frases", "genre": "gênero", "releaseYear": 2024, "artist": "artista/banda", "language": "idioma"}`;
+{"title": "nome da música", "description": "sobre a música em 2-3 frases em português", "genre": "gênero", "releaseYear": 2024, "artist": "artista/banda", "language": "idioma"}`;
   }
 
   return baseInstruction;
@@ -142,7 +140,7 @@ export interface MemberPreference {
 
 function buildGroupPrompt(preferences: MemberPreference[]): string {
   const baseInstruction =
-    "Você é um assistente especializado em recomendar entretenimento para grupos. Responda SEMPRE em português brasileiro. Retorne EXATAMENTE um JSON válido (sem markdown, sem blocos de código) com os campos especificados.";
+    "Você é um assistente especializado em recomendar entretenimento para grupos. Retorne EXATAMENTE um JSON válido (sem markdown, sem blocos de código) com os campos especificados.";
 
   const typeLabels: Record<string, string> = {
     movie: "filme",
@@ -177,8 +175,11 @@ ${typeInstruction}
 Preferências individuais dos membros:
 ${memberLines.join("\n")}
 
-Retorne este JSON exato (use null para campos não aplicáveis):
-{"activityType": "movie|tv_show|anime|music", "title": "nome", "description": "por que este conteúdo agrada ao grupo em 2-3 frases", "genre": "gênero", "releaseYear": 2024, "rating": 8.5, "seasons": null, "episodes": null, "artist": null, "language": null}`;
+Se o tipo escolhido for música, retorne este JSON:
+{"activityType": "music", "title": "nome da música", "description": "por que agrada ao grupo em 2-3 frases em português", "genre": "gênero", "releaseYear": 2024, "artist": "artista/banda", "language": "idioma"}
+
+Caso contrário (filme, série, anime), retorne este JSON:
+{"activityType": "movie|tv_show|anime", "title": "nome original do título"}`;
 }
 
 export async function getGroupRecommendation(

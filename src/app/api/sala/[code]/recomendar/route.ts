@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { rooms, roomMembers, recommendations } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getGroupRecommendation } from "@/lib/ai";
-import { fetchImageUrl } from "@/lib/tmdb";
+import { fetchMediaDetails } from "@/lib/tmdb";
 import { getTodayCount, DAILY_LIMIT } from "@/lib/rate-limit";
 import type { ActivityType, Filters } from "@/types";
 
@@ -88,13 +88,8 @@ export async function POST(
   }));
 
   let recommendation;
-  let imageUrl: string | null = null;
   try {
     recommendation = await getGroupRecommendation(memberPreferences);
-    imageUrl = await fetchImageUrl(
-      recommendation.title,
-      recommendation.activityType
-    );
   } catch (error: unknown) {
     // Revert room status on AI failure so creator can retry
     await db
@@ -114,6 +109,12 @@ export async function POST(
     );
   }
 
+  // For non-music types, fetch details from TMDB
+  const tmdbDetails = await fetchMediaDetails(
+    recommendation.title,
+    recommendation.activityType
+  );
+
   const insertedIds: string[] = [];
   for (const member of members) {
     const [saved] = await db
@@ -121,16 +122,16 @@ export async function POST(
       .values({
         userId: member.userId,
         activityType: recommendation.activityType,
-        title: recommendation.title,
-        description: recommendation.description,
-        genre: recommendation.genre,
-        releaseYear: recommendation.releaseYear,
-        rating: recommendation.rating,
-        seasons: recommendation.seasons,
-        episodes: recommendation.episodes,
+        title: tmdbDetails?.title || recommendation.title,
+        description: tmdbDetails?.description || recommendation.description,
+        genre: tmdbDetails?.genre || recommendation.genre,
+        releaseYear: tmdbDetails?.releaseYear || recommendation.releaseYear,
+        rating: tmdbDetails?.rating || recommendation.rating,
+        seasons: tmdbDetails?.seasons || recommendation.seasons,
+        episodes: tmdbDetails?.episodes || recommendation.episodes,
         artist: recommendation.artist,
         language: recommendation.language,
-        imageUrl,
+        imageUrl: tmdbDetails?.imageUrl || null,
       })
       .returning();
     insertedIds.push(saved.id);

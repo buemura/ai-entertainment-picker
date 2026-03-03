@@ -6,7 +6,19 @@ const headers = {
   "Content-Type": "application/json",
 };
 
+export interface TmdbMediaDetails {
+  title: string;
+  description: string;
+  genre: string | null;
+  releaseYear: number | null;
+  rating: number | null;
+  seasons: number | null;
+  episodes: number | null;
+  imageUrl: string | null;
+}
+
 interface TmdbSearchResult {
+  id: number;
   poster_path: string | null;
 }
 
@@ -14,24 +26,89 @@ interface TmdbSearchResponse {
   results: TmdbSearchResult[];
 }
 
-export async function fetchImageUrl(
+interface TmdbMovieDetails {
+  title: string;
+  overview: string;
+  genres: { id: number; name: string }[];
+  release_date: string;
+  vote_average: number;
+  poster_path: string | null;
+}
+
+interface TmdbTvDetails {
+  name: string;
+  overview: string;
+  genres: { id: number; name: string }[];
+  first_air_date: string;
+  vote_average: number;
+  number_of_seasons: number;
+  number_of_episodes: number;
+  poster_path: string | null;
+}
+
+export async function fetchMediaDetails(
   title: string,
   activityType: string
-): Promise<string | null> {
+): Promise<TmdbMediaDetails | null> {
   if (activityType === "music") return null;
 
   try {
-    const endpoint =
-      activityType === "movie" ? "/search/movie" : "/search/tv";
-    const url = `${TMDB_BASE_URL}${endpoint}?query=${encodeURIComponent(title)}&language=pt-BR`;
+    const isMovie = activityType === "movie";
+    const searchEndpoint = isMovie ? "/search/movie" : "/search/tv";
+    const searchUrl = `${TMDB_BASE_URL}${searchEndpoint}?query=${encodeURIComponent(title)}&language=pt-BR`;
 
-    const res = await fetch(url, { headers });
-    if (!res.ok) return null;
+    const searchRes = await fetch(searchUrl, { headers });
+    if (!searchRes.ok) return null;
 
-    const data: TmdbSearchResponse = await res.json();
-    const posterPath = data.results?.[0]?.poster_path;
+    const searchData: TmdbSearchResponse = await searchRes.json();
+    const firstResult = searchData.results?.[0];
+    if (!firstResult) return null;
 
-    return posterPath ? `${TMDB_IMAGE_BASE_URL}${posterPath}` : null;
+    const detailEndpoint = isMovie
+      ? `/movie/${firstResult.id}`
+      : `/tv/${firstResult.id}`;
+    const detailUrl = `${TMDB_BASE_URL}${detailEndpoint}?language=pt-BR`;
+
+    const detailRes = await fetch(detailUrl, { headers });
+    if (!detailRes.ok) return null;
+
+    if (isMovie) {
+      const movie: TmdbMovieDetails = await detailRes.json();
+      return {
+        title: movie.title,
+        description: movie.overview || "Sem descrição disponível.",
+        genre: movie.genres?.[0]?.name || null,
+        releaseYear: movie.release_date
+          ? parseInt(movie.release_date.substring(0, 4))
+          : null,
+        rating: movie.vote_average
+          ? Math.round(movie.vote_average * 10) / 10
+          : null,
+        seasons: null,
+        episodes: null,
+        imageUrl: movie.poster_path
+          ? `${TMDB_IMAGE_BASE_URL}${movie.poster_path}`
+          : null,
+      };
+    }
+
+    const tv: TmdbTvDetails = await detailRes.json();
+    return {
+      title: tv.name,
+      description: tv.overview || "Sem descrição disponível.",
+      genre: tv.genres?.[0]?.name || null,
+      releaseYear: tv.first_air_date
+        ? parseInt(tv.first_air_date.substring(0, 4))
+        : null,
+      rating: tv.vote_average
+        ? Math.round(tv.vote_average * 10) / 10
+        : null,
+      seasons: tv.number_of_seasons || null,
+      episodes: tv.number_of_episodes || null,
+      imageUrl: tv.poster_path
+        ? `${TMDB_IMAGE_BASE_URL}${tv.poster_path}`
+        : null,
+    };
   } catch {
     return null;
   }

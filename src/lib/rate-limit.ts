@@ -1,8 +1,10 @@
 import { db } from "@/db";
 import { recommendations } from "@/db/schema";
-import { eq, and, gte } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 
-export const DAILY_LIMIT = 3;
+export const DAILY_LIMIT = process.env.DAILY_LIMIT
+  ? parseInt(process.env.DAILY_LIMIT)
+  : 3;
 
 function getStartOfDay(): Date {
   const now = new Date();
@@ -18,8 +20,8 @@ export async function getTodayCount(userId: string): Promise<number> {
     .where(
       and(
         eq(recommendations.userId, userId),
-        gte(recommendations.createdAt, startOfDay)
-      )
+        gte(recommendations.createdAt, startOfDay),
+      ),
     );
   return todayRecs.length;
 }

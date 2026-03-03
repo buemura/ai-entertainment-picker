@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { recommendations } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getRecommendation } from "@/lib/ai";
-import { fetchImageUrl } from "@/lib/tmdb";
+import { fetchMediaDetails } from "@/lib/tmdb";
 import { getTodayCount, DAILY_LIMIT } from "@/lib/rate-limit";
 import type { ActivityType, Filters } from "@/types";
 
@@ -50,14 +50,12 @@ export async function POST(request: Request) {
   const previousTitles = previous.map((r) => r.title);
 
   let recommendation;
-  let imageUrl: string | null = null;
   try {
     recommendation = await getRecommendation(
       resolvedType,
       filters,
       previousTitles
     );
-    imageUrl = await fetchImageUrl(recommendation.title, resolvedType);
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Erro desconhecido";
@@ -76,22 +74,25 @@ export async function POST(request: Request) {
     );
   }
 
+  // For non-music types, fetch details from TMDB
+  const tmdbDetails = await fetchMediaDetails(recommendation.title, resolvedType);
+
   // Save to history
   const [saved] = await db
     .insert(recommendations)
     .values({
       userId: session.user.id,
       activityType: resolvedType,
-      title: recommendation.title,
-      description: recommendation.description,
-      genre: recommendation.genre,
-      releaseYear: recommendation.releaseYear,
-      rating: recommendation.rating,
-      seasons: recommendation.seasons,
-      episodes: recommendation.episodes,
+      title: tmdbDetails?.title || recommendation.title,
+      description: tmdbDetails?.description || recommendation.description,
+      genre: tmdbDetails?.genre || recommendation.genre,
+      releaseYear: tmdbDetails?.releaseYear || recommendation.releaseYear,
+      rating: tmdbDetails?.rating || recommendation.rating,
+      seasons: tmdbDetails?.seasons || recommendation.seasons,
+      episodes: tmdbDetails?.episodes || recommendation.episodes,
       artist: recommendation.artist,
       language: recommendation.language,
-      imageUrl,
+      imageUrl: tmdbDetails?.imageUrl || null,
     })
     .returning();
 
