@@ -58,20 +58,31 @@ export default function HistoricoPage() {
     RecommendationData[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
+
+  async function fetchHistory(pageNum: number) {
+    try {
+      const res = await fetch(`/api/recomendacao?page=${pageNum}&limit=${limit}`);
+      if (res.ok) {
+        const data = await res.json();
+        setTotal(data.total);
+        if (pageNum === 1) {
+          setRecommendations(data.recommendations);
+        } else {
+          setRecommendations((prev) => [...prev, ...data.recommendations]);
+        }
+      }
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  }
 
   useEffect(() => {
-    async function fetchHistory() {
-      try {
-        const res = await fetch("/api/recomendacao");
-        if (res.ok) {
-          const data = await res.json();
-          setRecommendations(data.recommendations);
-        }
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchHistory();
+    fetchHistory(1);
   }, []);
 
   if (loading) {
@@ -100,8 +111,8 @@ export default function HistoricoPage() {
             📜 Seu Histórico
           </h1>
           <p className="mt-1 font-medium text-black/60">
-            {recommendations.length} recomendaç
-            {recommendations.length !== 1 ? "ões" : "ão"} no total
+            {total} recomendaç
+            {total !== 1 ? "ões" : "ão"} no total
           </p>
         </div>
         <button
@@ -228,6 +239,24 @@ export default function HistoricoPage() {
           </div>
         </div>
       ))}
+
+      {/* Load more button */}
+      {recommendations.length < total && (
+        <div className="mt-4 mb-8 text-center">
+          <button
+            onClick={() => {
+              const nextPage = page + 1;
+              setPage(nextPage);
+              setLoadingMore(true);
+              fetchHistory(nextPage);
+            }}
+            disabled={loadingMore}
+            className="neo-btn bg-brutal-sky text-black disabled:opacity-50"
+          >
+            {loadingMore ? "Carregando..." : "Carregar mais"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,17 +1,17 @@
-import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { recommendations } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
 import { getRecommendation } from "@/lib/ai";
+import { auth } from "@/lib/auth";
+import { getDailyLimit, getTodayCount } from "@/lib/rate-limit";
 import { fetchMediaDetails } from "@/lib/tmdb";
-import { getTodayCount, getDailyLimit } from "@/lib/rate-limit";
 import {
-  safeParseJson,
-  recommendationSchema,
   formatZodError,
+  recommendationSchema,
+  safeParseJson,
 } from "@/lib/validation";
 import type { ActivityType } from "@/types";
+import { count, desc, eq } from "drizzle-orm";
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   const session = await auth();
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
         error: `Você atingiu o limite de ${dailyLimit} recomendações por dia. Volte amanhã!`,
         remaining: 0,
       },
-      { status: 429 }
+      { status: 429 },
     );
   }
 
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   if (!result.success) {
     return NextResponse.json(
       { error: formatZodError(result.error) },
-      { status: 400 }
+      { status: 400 },
     );
   }
   const { activityType, filters } = result.data;
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     recommendation = await getRecommendation(
       resolvedType,
       filters,
-      previousTitles
+      previousTitles,
     );
   } catch (error: unknown) {
     const message =
@@ -78,17 +78,20 @@ export async function POST(request: Request) {
           error:
             "A IA está temporariamente indisponível (limite de requisições atingido). Tente novamente em alguns minutos.",
         },
-        { status: 429 }
+        { status: 429 },
       );
     }
     return NextResponse.json(
       { error: "Erro ao gerar recomendação. Tente novamente." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
   // For non-music types, fetch details from TMDB
-  const tmdbDetails = await fetchMediaDetails(recommendation.title, resolvedType);
+  const tmdbDetails = await fetchMediaDetails(
+    recommendation.title,
+    resolvedType,
+  );
 
   // Save to history
   const [saved] = await db
@@ -115,17 +118,33 @@ export async function POST(request: Request) {
   });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
-  const history = await db
-    .select()
-    .from(recommendations)
-    .where(eq(recommendations.userId, session.user.id))
-    .orderBy(desc(recommendations.createdAt));
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const limit = Math.min(
+    5,
+    Math.max(1, Number(searchParams.get("limit")) || 10),
+  );
+  const offset = (page - 1) * limit;
 
-  return NextResponse.json({ recommendations: history });
+  const [history, [{ total }]] = await Promise.all([
+    db
+      .select()
+      .from(recommendations)
+      .where(eq(recommendations.userId, session.user.id))
+      .orderBy(desc(recommendations.createdAt))
+      .limit(limit)
+      .offset(offset),
+    db
+      .select({ total: count() })
+      .from(recommendations)
+      .where(eq(recommendations.userId, session.user.id)),
+  ]);
+
+  return NextResponse.json({ recommendations: history, total, page, limit });
 }
