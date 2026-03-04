@@ -10,7 +10,7 @@ import {
   safeParseJson,
 } from "@/lib/validation";
 import type { ActivityType } from "@/types";
-import { count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -131,19 +131,27 @@ export async function GET(request: Request) {
     Math.max(1, Number(searchParams.get("limit")) || 10),
   );
   const offset = (page - 1) * limit;
+  const type = searchParams.get("type");
+
+  const whereClause = type
+    ? and(
+        eq(recommendations.userId, session.user.id),
+        eq(recommendations.activityType, type),
+      )
+    : eq(recommendations.userId, session.user.id);
 
   const [history, [{ total }]] = await Promise.all([
     db
       .select()
       .from(recommendations)
-      .where(eq(recommendations.userId, session.user.id))
+      .where(whereClause)
       .orderBy(desc(recommendations.createdAt))
       .limit(limit)
       .offset(offset),
     db
       .select({ total: count() })
       .from(recommendations)
-      .where(eq(recommendations.userId, session.user.id)),
+      .where(whereClause),
   ]);
 
   return NextResponse.json({ recommendations: history, total, page, limit });

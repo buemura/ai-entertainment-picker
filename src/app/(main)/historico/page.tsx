@@ -61,11 +61,14 @@ export default function HistoricoPage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const limit = 10;
 
-  async function fetchHistory(pageNum: number) {
+  async function fetchHistory(pageNum: number, type: string | null = activeFilter) {
     try {
-      const res = await fetch(`/api/recomendacao?page=${pageNum}&limit=${limit}`);
+      const params = new URLSearchParams({ page: String(pageNum), limit: String(limit) });
+      if (type) params.set("type", type);
+      const res = await fetch(`/api/recomendacao?${params}`);
       if (res.ok) {
         const data = await res.json();
         setTotal(data.total);
@@ -79,6 +82,14 @@ export default function HistoricoPage() {
       setLoading(false);
       setLoadingMore(false);
     }
+  }
+
+  function handleFilterChange(type: string | null) {
+    setActiveFilter(type);
+    setPage(1);
+    setRecommendations([]);
+    setLoading(true);
+    fetchHistory(1, type);
   }
 
   useEffect(() => {
@@ -121,6 +132,29 @@ export default function HistoricoPage() {
         >
           + Nova
         </button>
+      </div>
+
+      {/* Filters */}
+      <div className="mb-6 flex flex-wrap gap-2">
+        <button
+          onClick={() => handleFilterChange(null)}
+          className={`neo-card-static px-3 py-1.5 text-sm font-bold transition-colors ${
+            activeFilter === null ? "bg-black text-white" : "bg-white text-black"
+          }`}
+        >
+          Todos
+        </button>
+        {Object.entries(typeConfig).map(([key, config]) => (
+          <button
+            key={key}
+            onClick={() => handleFilterChange(key)}
+            className={`neo-card-static px-3 py-1.5 text-sm font-bold transition-colors ${
+              activeFilter === key ? "bg-black text-white" : "bg-white text-black"
+            }`}
+          >
+            {config.emoji} {config.label}
+          </button>
+        ))}
       </div>
 
       {/* Empty state */}
