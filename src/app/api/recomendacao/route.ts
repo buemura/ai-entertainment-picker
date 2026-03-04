@@ -5,7 +5,7 @@ import { recommendations } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getRecommendation } from "@/lib/ai";
 import { fetchMediaDetails } from "@/lib/tmdb";
-import { getTodayCount, DAILY_LIMIT } from "@/lib/rate-limit";
+import { getTodayCount, getDailyLimit } from "@/lib/rate-limit";
 import {
   safeParseJson,
   recommendationSchema,
@@ -19,12 +19,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
   }
 
-  // Rate limit: max DAILY_LIMIT recommendations per day
+  // Rate limit: max daily recommendations per user
+  const dailyLimit = await getDailyLimit(session.user.id);
   const todayCount = await getTodayCount(session.user.id);
-  if (todayCount >= DAILY_LIMIT) {
+  if (todayCount >= dailyLimit) {
     return NextResponse.json(
       {
-        error: `Você atingiu o limite de ${DAILY_LIMIT} recomendações por dia. Volte amanhã!`,
+        error: `Você atingiu o limite de ${dailyLimit} recomendações por dia. Volte amanhã!`,
         remaining: 0,
       },
       { status: 429 }
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     recommendation: saved,
-    remaining: DAILY_LIMIT - todayCount - 1,
+    remaining: dailyLimit - todayCount - 1,
   });
 }
 

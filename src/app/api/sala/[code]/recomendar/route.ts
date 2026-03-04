@@ -5,7 +5,7 @@ import { rooms, roomMembers, recommendations } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { getGroupRecommendation } from "@/lib/ai";
 import { fetchMediaDetails } from "@/lib/tmdb";
-import { getTodayCount, DAILY_LIMIT } from "@/lib/rate-limit";
+import { getTodayCount, getDailyLimit } from "@/lib/rate-limit";
 import { validateRoomCode } from "@/lib/validation";
 import type { ActivityType, Filters } from "@/types";
 
@@ -71,8 +71,9 @@ export async function POST(
   }
 
   for (const member of members) {
+    const memberLimit = await getDailyLimit(member.userId);
     const count = await getTodayCount(member.userId);
-    if (count >= DAILY_LIMIT) {
+    if (count >= memberLimit) {
       await db
         .update(rooms)
         .set({ status: "waiting" })
