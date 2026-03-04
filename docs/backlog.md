@@ -26,7 +26,7 @@
 
 ### Média Prioridade
 
-- [ ] **Compartilhar recomendação** — Gerar link ou card compartilhável para redes sociais
+- [x] **Compartilhar recomendação** — Gerar link ou card compartilhável para redes sociais
 - [ ] **Votação em grupo** — Membros da sala votam entre opções antes da escolha final
 - [ ] **Salas persistentes** — Opção de salas que duram mais que 2 horas
 - [ ] **Bloquear títulos** — Marcar títulos para nunca mais serem recomendados

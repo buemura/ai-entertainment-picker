@@ -41,7 +41,7 @@ function formatDate(dateStr: string): string {
 }
 
 function groupByDate(
-  items: RecommendationData[]
+  items: RecommendationData[],
 ): Record<string, RecommendationData[]> {
   const groups: Record<string, RecommendationData[]> = {};
   for (const item of items) {
@@ -54,19 +54,27 @@ function groupByDate(
 
 export default function HistoricoPage() {
   const router = useRouter();
-  const [recommendations, setRecommendations] = useState<
-    RecommendationData[]
-  >([]);
+  const [recommendations, setRecommendations] = useState<RecommendationData[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const limit = 10;
 
-  async function fetchHistory(pageNum: number, type: string | null = activeFilter) {
+  async function fetchHistory(
+    pageNum: number,
+    type: string | null = activeFilter,
+  ) {
     try {
-      const params = new URLSearchParams({ page: String(pageNum), limit: String(limit) });
+      const params = new URLSearchParams({
+        page: String(pageNum),
+        limit: String(limit),
+      });
       if (type) params.set("type", type);
       const res = await fetch(`/api/recomendacao?${params}`);
       if (res.ok) {
@@ -81,6 +89,25 @@ export default function HistoricoPage() {
     } finally {
       setLoading(false);
       setLoadingMore(false);
+    }
+  }
+
+  async function handleShare(rec: RecommendationData) {
+    const shareUrl = `${window.location.origin}/compartilhar/${rec.id}`;
+    const shareData = {
+      title: rec.title,
+      text: rec.description,
+      url: shareUrl,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopiedId(rec.id);
+      setTimeout(() => setCopiedId(null), 2000);
     }
   }
 
@@ -100,9 +127,7 @@ export default function HistoricoPage() {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin-slow mb-4 inline-block text-6xl">
-            📜
-          </div>
+          <div className="animate-spin-slow mb-4 inline-block text-6xl">📜</div>
           <p className="text-lg font-bold text-black/60">
             Carregando histórico...
           </p>
@@ -139,7 +164,9 @@ export default function HistoricoPage() {
         <button
           onClick={() => handleFilterChange(null)}
           className={`neo-card-static px-3 py-1.5 text-sm font-bold transition-colors ${
-            activeFilter === null ? "bg-black text-white" : "bg-white text-black"
+            activeFilter === null
+              ? "bg-black text-white"
+              : "bg-white text-black"
           }`}
         >
           Todos
@@ -149,7 +176,9 @@ export default function HistoricoPage() {
             key={key}
             onClick={() => handleFilterChange(key)}
             className={`neo-card-static px-3 py-1.5 text-sm font-bold transition-colors ${
-              activeFilter === key ? "bg-black text-white" : "bg-white text-black"
+              activeFilter === key
+                ? "bg-black text-white"
+                : "bg-white text-black"
             }`}
           >
             {config.emoji} {config.label}
@@ -194,46 +223,60 @@ export default function HistoricoPage() {
                 color: "bg-brutal-purple",
                 label: "Outro",
               };
+              const isExpanded = expandedId === rec.id;
               return (
                 <div
                   key={rec.id}
-                  className={`neo-card-static animate-pop-in ${config.color} p-5`}
+                  className={`neo-card-static animate-pop-in ${config.color} overflow-hidden`}
                   style={{ animationDelay: `${i * 60}ms` }}
                 >
-                  <div className="flex items-start gap-4">
-                    {rec.imageUrl ? (
-                      <div className="neo-card-static shrink-0 overflow-hidden bg-white p-0.5">
-                        <Image
-                          src={rec.imageUrl}
-                          alt={rec.title}
-                          width={64}
-                          height={96}
-                          className="h-24 w-16 rounded object-cover"
-                        />
-                      </div>
-                    ) : (
-                      <div className="text-3xl">{config.emoji}</div>
-                    )}
-                    <div className="flex-1">
-                      <div className="mb-1 flex items-center gap-2">
+                  {/* Card header: clickable on mobile, static on desktop */}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setExpandedId(isExpanded ? null : rec.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setExpandedId(isExpanded ? null : rec.id);
+                      }
+                    }}
+                    className="flex w-full cursor-pointer items-start gap-4 p-4 text-left md:cursor-default"
+                  >
+                    <div className="shrink-0 flex flex-col items-center justify-between gap-4 self-stretch">
+                      {rec.imageUrl ? (
+                        <div className="neo-card-static overflow-hidden bg-white p-0.5">
+                          <Image
+                            src={rec.imageUrl}
+                            alt={rec.title}
+                            width={128}
+                            height={192}
+                            className="h-48 w-32 rounded object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="neo-card-static flex h-48 w-32 items-center justify-center rounded bg-white text-4xl">
+                          {config.emoji}
+                        </div>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-4">
+                      <div className="flex flex-col items-start gap-3 md:flex-row md:items-center md:gap-4">
                         <span className="neo-card-static bg-white px-2 py-0.5 text-xs font-bold text-black">
                           {config.label}
                         </span>
                         {rec.genre && (
-                          <span className="text-xs font-bold text-black/50">
+                          <span className="truncate text-xs font-bold text-black/50">
                             {rec.genre}
                           </span>
                         )}
                       </div>
-                      <h4 className="font-display text-xl text-black">
+                      <h4 className="font-display text-lg text-black">
                         {rec.title}
                       </h4>
-                      <p className="mt-1 text-sm font-medium text-black/70">
-                        {rec.description}
-                      </p>
 
-                      {/* Metadata chips */}
-                      <div className="mt-2 flex flex-wrap gap-1.5">
+                      {/* Badges: always visible */}
+                      <div className="flex flex-wrap gap-1.5">
                         {rec.releaseYear && (
                           <span className="rounded-md bg-white/60 px-2 py-0.5 text-xs font-bold text-black/70">
                             📅 {rec.releaseYear}
@@ -265,8 +308,39 @@ export default function HistoricoPage() {
                           </span>
                         )}
                       </div>
+
+                      {/* Desktop: description inline */}
+                      <p className="hidden text-sm font-medium text-black/70 md:block">
+                        {rec.description}
+                      </p>
+                    </div>
+                    {/* Share + chevron */}
+                    <div className="shrink-0 flex flex-col items-center justify-between self-stretch">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleShare(rec);
+                        }}
+                        className="neo-card-static bg-white px-2 py-1 text-lg cursor-pointer"
+                      >
+                        {copiedId === rec.id ? "✅" : "📤"}
+                      </button>
+                      <span
+                        className={`text-sm text-black/40 transition-transform md:hidden ${isExpanded ? "rotate-180" : ""}`}
+                      >
+                        ▼
+                      </span>
                     </div>
                   </div>
+
+                  {/* Mobile: expandable details */}
+                  {isExpanded && (
+                    <div className="border-t-2 border-black/10 px-4 pb-4 pt-3 md:hidden">
+                      <p className="text-sm font-medium text-black/70">
+                        {rec.description}
+                      </p>
+                    </div>
+                  )}
                 </div>
               );
             })}

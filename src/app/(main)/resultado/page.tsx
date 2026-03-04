@@ -30,6 +30,7 @@ function ResultContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [remaining, setRemaining] = useState<number | null>(null);
+  const [shareLabel, setShareLabel] = useState("📤 Compartilhar");
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchRecommendation = useCallback(async () => {
@@ -194,6 +195,25 @@ function ResultContent() {
 
   if (!recommendation) return null;
 
+  const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/compartilhar/${recommendation.id}`;
+    const shareData = {
+      title: recommendation.title,
+      text: recommendation.description,
+      url: shareUrl,
+    };
+
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareLabel("✅ Link copiado!");
+      setTimeout(() => setShareLabel("📤 Compartilhar"), 2000);
+    }
+  };
+
   const resolvedType = recommendation.activityType as string;
   const color = typeColors[resolvedType] || "bg-brutal-purple";
   const emoji = typeEmojis[resolvedType] || "🎲";
@@ -323,6 +343,12 @@ function ResultContent() {
           className="neo-btn bg-brutal-cream text-lg text-black"
         >
           📜 Histórico
+        </button>
+        <button
+          onClick={handleShare}
+          className="neo-btn bg-brutal-purple text-lg text-black"
+        >
+          {shareLabel}
         </button>
       </div>
     </div>
