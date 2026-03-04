@@ -33,6 +33,7 @@ function ResultContent() {
   const [remaining, setRemaining] = useState<number | null>(null);
   const [shareLabel, setShareLabel] = useState("📤 Compartilhar");
   const [showWatchlistModal, setShowWatchlistModal] = useState(false);
+  const [watchedLabel, setWatchedLabel] = useState("✅ Já assisti");
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchRecommendation = useCallback(async () => {
@@ -357,6 +358,21 @@ function ResultContent() {
           className="neo-btn bg-brutal-sky text-lg text-black"
         >
           📋 Salvar em Lista
+        </button>
+        <button
+          onClick={async () => {
+            if (!recommendation) return;
+            const res = await fetch(`/api/recomendacao/${recommendation.id}/watched`, {
+              method: "PATCH",
+            });
+            if (res.ok) {
+              setWatchedLabel("✅ Marcado!");
+              setTimeout(() => setWatchedLabel("✅ Já assisti"), 2000);
+            }
+          }}
+          className="neo-btn bg-brutal-green text-lg text-black"
+        >
+          {watchedLabel}
         </button>
       </div>
 

@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { AddToWatchlistModal } from "@/components/add-to-watchlist-modal";
 
 interface RecommendationData {
   id: string;
@@ -53,7 +52,7 @@ function groupByDate(
   return groups;
 }
 
-export default function HistoricoPage() {
+export default function AssistidosPage() {
   const router = useRouter();
   const [recommendations, setRecommendations] = useState<RecommendationData[]>(
     [],
@@ -63,13 +62,11 @@ export default function HistoricoPage() {
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [watchlistTarget, setWatchlistTarget] = useState<string | null>(null);
-  const [watchingId, setWatchingId] = useState<string | null>(null);
+  const [unwatchingId, setUnwatchingId] = useState<string | null>(null);
   const limit = 10;
 
-  async function fetchHistory(
+  async function fetchWatched(
     pageNum: number,
     type: string | null = activeFilter,
   ) {
@@ -77,6 +74,7 @@ export default function HistoricoPage() {
       const params = new URLSearchParams({
         page: String(pageNum),
         limit: String(limit),
+        watched: "true",
       });
       if (type) params.set("type", type);
       const res = await fetch(`/api/recomendacao?${params}`);
@@ -95,27 +93,8 @@ export default function HistoricoPage() {
     }
   }
 
-  async function handleShare(rec: RecommendationData) {
-    const shareUrl = `${window.location.origin}/compartilhar/${rec.id}`;
-    const shareData = {
-      title: rec.title,
-      text: rec.description,
-      url: shareUrl,
-    };
-
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {}
-    } else {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopiedId(rec.id);
-      setTimeout(() => setCopiedId(null), 2000);
-    }
-  }
-
-  async function handleMarkWatched(id: string) {
-    setWatchingId(id);
+  async function handleUnwatch(id: string) {
+    setUnwatchingId(id);
     try {
       const res = await fetch(`/api/recomendacao/${id}/watched`, {
         method: "PATCH",
@@ -125,7 +104,7 @@ export default function HistoricoPage() {
         setTotal((prev) => prev - 1);
       }
     } finally {
-      setWatchingId(null);
+      setUnwatchingId(null);
     }
   }
 
@@ -134,20 +113,20 @@ export default function HistoricoPage() {
     setPage(1);
     setRecommendations([]);
     setLoading(true);
-    fetchHistory(1, type);
+    fetchWatched(1, type);
   }
 
   useEffect(() => {
-    fetchHistory(1);
+    fetchWatched(1);
   }, []);
 
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin-slow mb-4 inline-block text-6xl">📜</div>
+          <div className="animate-spin-slow mb-4 inline-block text-6xl">✅</div>
           <p className="text-lg font-bold text-black/60">
-            Carregando histórico...
+            Carregando assistidos...
           </p>
         </div>
       </div>
@@ -162,27 +141,18 @@ export default function HistoricoPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="font-display text-3xl text-black sm:text-4xl">
-            📜 Seu Histórico
+            ✅ Assistidos
           </h1>
           <p className="mt-1 font-medium text-black/60">
-            {total} recomendaç
-            {total !== 1 ? "ões" : "ão"} no total
+            {total} item{total !== 1 ? "s" : ""} assistido{total !== 1 ? "s" : ""}
           </p>
         </div>
-        <div className="flex flex-col gap-2">
-          <button
-            onClick={() => router.push("/")}
-            className="neo-btn bg-brutal-yellow text-black"
-          >
-            + Nova
-          </button>
-          <button
-            onClick={() => router.push("/assistidos")}
-            className="neo-btn bg-brutal-green text-black"
-          >
-            ✅ Assistidos
-          </button>
-        </div>
+        <button
+          onClick={() => router.push("/historico")}
+          className="neo-btn bg-brutal-yellow text-black"
+        >
+          📜 Histórico
+        </button>
       </div>
 
       {/* Filters */}
@@ -217,16 +187,16 @@ export default function HistoricoPage() {
         <div className="neo-card-static bg-white p-12 text-center">
           <div className="mb-4 text-6xl">🫥</div>
           <h2 className="font-display text-2xl text-black">
-            Nada por aqui ainda
+            Nenhum item assistido
           </h2>
           <p className="mt-2 font-medium text-black/60">
-            Suas recomendações aparecerão aqui depois que você pedir a primeira.
+            Marque recomendações como assistidas no histórico para vê-las aqui.
           </p>
           <button
-            onClick={() => router.push("/")}
+            onClick={() => router.push("/historico")}
             className="neo-btn mt-6 bg-brutal-yellow text-black"
           >
-            🎲 Pedir Recomendação
+            📜 Ir para o Histórico
           </button>
         </div>
       )}
@@ -253,10 +223,10 @@ export default function HistoricoPage() {
               return (
                 <div
                   key={rec.id}
-                  className={`neo-card-static animate-pop-in ${config.color} overflow-hidden`}
+                  className={`neo-card-static animate-pop-in ${config.color} overflow-hidden opacity-80`}
                   style={{ animationDelay: `${i * 60}ms` }}
                 >
-                  {/* Card header: clickable on mobile, static on desktop */}
+                  {/* Card header */}
                   <div
                     role="button"
                     tabIndex={0}
@@ -301,7 +271,7 @@ export default function HistoricoPage() {
                         {rec.title}
                       </h4>
 
-                      {/* Badges: always visible */}
+                      {/* Badges */}
                       <div className="flex flex-wrap gap-1.5">
                         {rec.releaseYear && (
                           <span className="rounded-md bg-white/60 px-2 py-0.5 text-xs font-bold text-black/70">
@@ -340,39 +310,19 @@ export default function HistoricoPage() {
                         {rec.description}
                       </p>
                     </div>
-                    {/* Share + watchlist + chevron */}
+                    {/* Unwatch button + chevron */}
                     <div className="shrink-0 flex flex-col items-center justify-between self-stretch">
-                      <div className="flex flex-col gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleShare(rec);
-                          }}
-                          className="neo-card-static bg-white px-2 py-1 text-lg cursor-pointer"
-                        >
-                          {copiedId === rec.id ? "✅" : "📤"}
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setWatchlistTarget(rec.id);
-                          }}
-                          className="neo-card-static bg-white px-2 py-1 text-lg cursor-pointer"
-                        >
-                          📋
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleMarkWatched(rec.id);
-                          }}
-                          disabled={watchingId === rec.id}
-                          className="neo-card-static bg-white px-2 py-1 text-lg cursor-pointer disabled:opacity-50"
-                          title="Marcar como assistido"
-                        >
-                          {watchingId === rec.id ? "⏳" : "✅"}
-                        </button>
-                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUnwatch(rec.id);
+                        }}
+                        disabled={unwatchingId === rec.id}
+                        className="neo-card-static bg-white px-2 py-1 text-lg cursor-pointer disabled:opacity-50"
+                        title="Desmarcar como assistido"
+                      >
+                        {unwatchingId === rec.id ? "⏳" : "↩️"}
+                      </button>
                       <span
                         className={`text-sm text-black/40 transition-transform md:hidden ${isExpanded ? "rotate-180" : ""}`}
                       >
@@ -396,13 +346,6 @@ export default function HistoricoPage() {
         </div>
       ))}
 
-      {watchlistTarget && (
-        <AddToWatchlistModal
-          recommendationId={watchlistTarget}
-          onClose={() => setWatchlistTarget(null)}
-        />
-      )}
-
       {/* Load more button */}
       {recommendations.length < total && (
         <div className="mt-4 mb-8 text-center">
@@ -411,7 +354,7 @@ export default function HistoricoPage() {
               const nextPage = page + 1;
               setPage(nextPage);
               setLoadingMore(true);
-              fetchHistory(nextPage);
+              fetchWatched(nextPage);
             }}
             disabled={loadingMore}
             className="neo-btn bg-brutal-sky text-black disabled:opacity-50"

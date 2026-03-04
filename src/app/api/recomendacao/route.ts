@@ -132,13 +132,17 @@ export async function GET(request: Request) {
   );
   const offset = (page - 1) * limit;
   const type = searchParams.get("type");
+  const watched = searchParams.get("watched");
 
-  const whereClause = type
-    ? and(
-        eq(recommendations.userId, session.user.id),
-        eq(recommendations.activityType, type),
-      )
-    : eq(recommendations.userId, session.user.id);
+  const conditions = [eq(recommendations.userId, session.user.id)];
+  if (type) conditions.push(eq(recommendations.activityType, type));
+  if (watched === "true") {
+    conditions.push(eq(recommendations.watched, true));
+  } else if (watched !== "all") {
+    conditions.push(eq(recommendations.watched, false));
+  }
+
+  const whereClause = and(...conditions);
 
   const [history, [{ total }]] = await Promise.all([
     db

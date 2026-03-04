@@ -5,6 +5,7 @@ import {
   timestamp,
   integer,
   real,
+  boolean,
   primaryKey,
 } from "drizzle-orm/pg-core";
 
@@ -78,6 +79,7 @@ export const recommendations = pgTable("recommendations", {
   artist: text("artist"),
   language: text("language"),
   imageUrl: text("image_url"),
+  watched: boolean("watched").default(false).notNull(),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
 });
 
